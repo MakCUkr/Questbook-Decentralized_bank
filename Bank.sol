@@ -1,60 +1,69 @@
-pragma solidity >=0.7.0 <0.9.0;
+// SPDX-License-Identifier: MIT
+pragma solidity ^0.8;
 
-
-interface cETH {
-    // define functions of COMPOUND we'll be using
+interface CEth {
     function mint() external payable; // to deposit to compound
     function redeem(uint redeemTokens) external returns (uint); // to withdraw from compound
-
-    //following 2 functions to determine how much you'll be able to withdraw
     function exchangeRateStored() external view returns (uint); 
     function balanceOf(address owner) external view returns (uint256 balance);
 }
 
+interface IERC20{
+    function approve(address spender, uint256 amount) external returns (bool);
+    function transfer(address recipient, uint256 amount) external returns (bool);
+    function allowance(address owner, address spender) external view returns (uint256);
+    function transferFrom(address sender, address recipient, uint256 amount) external returns (bool);
+    function balanceOf(address account) external view returns (uint256);
+    function totalSupply() external view returns (uint256);
+}
 
-contract SmartBankAccount 
-{
-    uint totalContractBalance = 0;
-    
-    address COMPOUND_CETH_ADDRESS = 0xd6801a1DfFCd0a410336Ef88DeF4320D6DF1883e;
-    cETH ceth = cETH(COMPOUND_CETH_ADDRESS);
-    mapping(address => uint) balances;
-    mapping(address => uint) depositTimestamps;
-    
+contract TestCompoundEth {
+    CEth public cToken;
+    IERC20 public ercToken;
+    mapping(address => uint) public balances;
+    // uint public totalAccountEthBalance;
 
-    function getContractBalance() public view returns(uint){
-        return totalContractBalance;
+    constructor(address _cToken/*, address _ercToken*/) 
+    {
+        cToken = CEth(_cToken);
+        // ercToken = IERC20(_ercToken);
     }
     
-
-    function addBalance() public payable {
-        balances[msg.sender] = msg.value;
-        totalContractBalance = totalContractBalance + msg.value;
-        depositTimestamps[msg.sender] = block.timestamp;
-        
-        // send ethers to mint()
-        ceth.mint{value: msg.value}();
-        
-    }
-    
-    function getBalance(address userAddress) public view returns(uint256) {
-        return balances[userAddress] * ceth.exchangeRateStored() / 1e18;
-    }
-    
-    function withdraw() public payable {        
-        address payable withdrawTo = payable(msg.sender);
-        uint amountToTransfer = getBalance(msg.sender);
-        
-        totalContractBalance = totalContractBalance - amountToTransfer;
-        balances[msg.sender] = 0;
-        ceth.redeem(getBalance(msg.sender));
-    }
-    
-    function addMoneyToContract() public payable {
-        totalContractBalance += msg.value;
+    function addBalance() public payable {     
+        // totalAccountEthBalance += msg.value;
+        uint balanceBefore = cToken.balanceOf(address(this));
+        cToken.mint{value: msg.value}();
+        uint toAddCEth = cToken.balanceOf(address(this)) - balanceBefore;
+        balances[msg.sender] += toAddCEth;   
     }
 
+    receive() external payable {}
     
+    function withdraw() public  payable
+    {
+        // uint256 toTransfer = cToken.balanceOf(address(this));
+        uint256 toTransfer = balances[msg.sender];
+        balances[msg.sender] = balances[msg.sender] - toTransfer;
+        cToken.redeem(toTransfer);
+
+        // uint toReturn = address(this).balance - totalAccountEthBalance;
+        // payable(msg.sender).transfer(toReturn);
+    }
+    
+    // function getCTokenBalance() external view returns (uint) {
+    //     return cToken.balanceOf(address(this));
+    // }
+
+
+    function redeem(uint _cTokenAmount) external {
+        require(balances[msg.sender] >= _cTokenAmount);
+        balances[msg.sender] -= _cTokenAmount;
+        require(cToken.redeem(_cTokenAmount) == 0, "redeem failed");
+    }
+
 }
 
 
+// for Rinkeby , use following contract address for cEth = 0xd6801a1DfFCd0a410336Ef88DeF4320D6DF1883e
+// for other Compound addresses, go to https://compound.finance/docs#getting-started
+// my wallet address = 0xC3B9701E27f2f6Eae771C157D09f6999969803B2

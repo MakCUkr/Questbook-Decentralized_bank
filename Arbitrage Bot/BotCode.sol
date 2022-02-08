@@ -17,6 +17,7 @@ contract BotCode
     IERC20 public dai = IERC20(0xc7AD46e0b8a400Bb3C915120d284AafbA8fc4735);
     uint256 public MAX_INT = 2**256 - 1;
 
+  //parameters for constructor: 0x5C69bEe701ef814a2B6a3EDD4B1652CB9cc5aA6f,0x7a250d5630B4cF539739dF2C5dAcb4c659F2488D,0xd9e1cE17f2641f24aE83637ab66a2cca9C378B9F
   constructor(address _factory, address _uniRouter, address _sushiRouter)  {
       uniswapFactory = IUniswapV2Factory(_factory);
       uniRouter = IUniswapV2Router02(_uniRouter);
@@ -37,7 +38,7 @@ contract BotCode
     path[0] =  token0;
     path[1] =  token1;
     uint amountReservedForUniswap = UniswapV2Library.getAmountsIn(address(uniswapFactory), _amount0, path)[0];
-    uint amountReceived = sushiRouter.swapExactTokensForTokens(amountToken, amountReservedForUniswap, path, msg.sender, 1 days)[1];
+    uint amountReceived = sushiRouter.swapExactTokensForTokens(_amount0, amountReservedForUniswap, path, msg.sender, 1 days)[1];
     // Profit goes to us
     weth.transfer(_sender, amountReceived - amountReservedForUniswap);
   }

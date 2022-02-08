@@ -21,7 +21,7 @@ const sushiFactory = new ethers.Contract( SUSHI_FACTORYv2_ADDRESS , uniswapFacto
 var uniswapPair, sushiswapPair;
 
 const ETH_TRADE = 10;
-const DAI_TRADE = 3500;
+// const DAI_TRADE = 3500;
 
 
 const start = async() => {
@@ -60,39 +60,48 @@ const start = async() => {
 				spread = Math.abs((sushiswapEthPrice / uniswapEthPrice - 1) * 100) - 0.6;
 			}
 			console.log("Price difference is favorable: ", priceFavorable);
+			console.log("Spread: ", spread);
+			console.log(await uniswapPair.token0());
+
 			if(! priceFavorable) return;
 			// const recommendedGasPrice = Number(await infuraProvider.getGasPrice());
 			// const actualGasPrice = recommendedGasPrice * 1.5; // to make sure our txn goes through
 			// console.log("Recommended Gas Price: ", recommendedGasPrice);
+
 			const gasLimit = await sushiswapPair.estimateGas.swap(
-       			0,
 		        ETH_TRADE,
+		        0,
 		        '0x318Edb8407bc022556989429EAC679F1e4001B5c',
 		        ethers.utils.toUtf8Bytes('1'),
 		     );
+
 		    const gasPrice = await wallet.getGasPrice();
 			const gasCost = Number(ethers.utils.formatEther(gasPrice.mul(gasLimit)));
-			const shouldSendTx = shouldStartEth
-			? (gasCost / ETH_TRADE) < spread
-			: (gasCost / (DAI_TRADE / priceUniswap)) < spread;
-			// don't trade if gasCost is higher than the spread
-			if (!shouldSendTx) return;
-			// define options in order to send the transaction
-			const options = {
-				gasPrice,
-				gasLimit,
-			};
-			const tx = await sushiEthDai.swap(
-				!shouldStartEth ? DAI_TRADE : 0,
-				shouldStartEth ? ETH_TRADE : 0,
-				flashLoanerAddress,
-				ethers.utils.toUtf8Bytes('1'), options,
-			);
-			// arbitrage completed.
-			console.log('ARBITRAGE EXECUTED! PENDING TX TO BE MINED');
-			console.log(tx);
-			await tx.wait();
-			console.log('Tx mindes succesfully');
+
+			console.log(gasPrice );
+
+			// const shouldSendTx = priceFavorable
+			// ? (gasCost / ETH_TRADE) < spread
+			// : (gasCost / (DAI_TRADE / priceUniswap)) < spread;
+
+			// // don't trade if gasCost is higher than the spread
+			// if (!shouldSendTx) return;
+			// // define options in order to send the transaction
+			// const options = {
+			// 	gasPrice,
+			// 	gasLimit,
+			// };
+			// const tx = await sushiEthDai.swap(
+			// 	!priceFavorable ? DAI_TRADE : 0,
+			// 	priceFavorable ? ETH_TRADE : 0,
+			// 	flashLoanerAddress,
+			// 	ethers.utils.toUtf8Bytes('1'), options,
+			// );
+			// // arbitrage completed.
+			// console.log('ARBITRAGE EXECUTED! PENDING TX TO BE MINED');
+			// console.log(tx);
+			// await tx.wait();
+			// console.log('Tx mindes succesfully');
 	    } 
 		catch (err) 
 	    {
